@@ -45,6 +45,42 @@ def convert_to_xywh(result):
     ret = list(map(str, ret))
     return ','.join(ret) + '\r\n'
 
+def sort_words(boxes):
+    """Sort boxes - (x, y, x+w, y+h) from left to right, top to bottom."""
+    mean_height = sum([y2 - y1 for _, y1, _, y2 in boxes]) / len(boxes)
+
+    # boxes.view('i8,i8,i8,i8').sort(order=['f1'], axis=0)
+    current_line = boxes[0][1]
+    lines = []
+    tmp_line = []
+    for box in boxes:
+        if box[1] > current_line + mean_height:
+            lines.append(tmp_line)
+            tmp_line = [box]
+            current_line = box[1]            
+            continue
+        tmp_line.append(box)
+    lines.append(tmp_line)
+
+    for line in lines:
+        line.sort(key=lambda box: box[0])
+
+    return lines
+
+def convert_to_string(lines):
+    """
+    this function gets the input from the sort_words func
+    converts each of the individual line from xyxy format to xywh format
+    then, output the complete string
+    """
+    ret = ''
+    for line in lines:
+        for i in line:
+            x = [i[0], i[1], i[2]-i[0], i[3]-i[1]]
+            ret += ','.join(list(map(str, x))) + '\r\n'
+        ret += '\r\n'
+    return ret.strip()
+
 def saveResult(img_file, img, boxes, dirname='./result/', verticals=None, texts=None):
         """ save text detection result one by one
         Args:
@@ -66,10 +102,26 @@ def saveResult(img_file, img, boxes, dirname='./result/', verticals=None, texts=
         if not os.path.isdir(dirname):
             os.mkdir(dirname)
 
+        ret = ''
+        for box in boxes:
+            poly = np.array(box).astype(np.int32).reshape((-1))
+            strResult = ','.join([str(p) for p in poly]) + '\r\n'
+            strResult = convert_to_xywh(strResult)
+            ret += strResult
+
+        a = ret.strip().split('\n')
+        a = [i.strip() for i in a]
+        a = [tuple(map(int, i.split(','))) for i in a]
+        out = []
+        for i in a:
+            out.append((
+                i[0], i[1],
+                i[0] + i[2],
+                i[1] + i[3],
+            ))
+        ret = sort_words(out)
+        ret = convert_to_string(ret)
+
         with open(res_file, 'w') as f:
-            for i, box in enumerate(boxes):
-                poly = np.array(box).astype(np.int32).reshape((-1))
-                strResult = ','.join([str(p) for p in poly]) + '\r\n'
-                strResult = convert_to_xywh(strResult)
-                f.write(strResult)
+            f.write(ret)
 
