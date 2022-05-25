@@ -3,31 +3,30 @@ Copyright (c) 2019-present NAVER Corp.
 MIT License
 """
 
+import argparse
+import json
+import os
 # -*- coding: utf-8 -*-
 import sys
-import os
 import time
-import argparse
-
-import torch
-import torch.nn as nn
-import torch.backends.cudnn as cudnn
-from torch.autograd import Variable
-
-from PIL import Image
+import zipfile
+from collections import OrderedDict
 
 import cv2
-from skimage import io
 import numpy as np
-import craft_utils
-import imgproc
-import file_utils
-import json
-import zipfile
+import torch
+import torch.backends.cudnn as cudnn
+import torch.nn as nn
+from PIL import Image
+from skimage import io
+from torch.autograd import Variable
 
+import craft_utils
+import file_utils
+import imgproc
 from craft import CRAFT
 
-from collections import OrderedDict
+
 def copyStateDict(state_dict):
     if list(state_dict.keys())[0].startswith("module"):
         start_idx = 1
@@ -43,7 +42,7 @@ def str2bool(v):
     return v.lower() in ("yes", "y", "true", "t", "1")
 
 parser = argparse.ArgumentParser(description='CRAFT Text Detection')
-parser.add_argument('--trained_model', default='weights/craft_mlt_25k.pth', type=str, help='pretrained model')
+parser.add_argument('--trained_model', default='./craft_mlt_25k.pth', type=str, help='pretrained model')
 parser.add_argument('--text_threshold', default=0.7, type=float, help='text confidence threshold')
 parser.add_argument('--low_text', default=0.4, type=float, help='text low-bound score')
 parser.add_argument('--link_threshold', default=0.4, type=float, help='link confidence threshold')
@@ -62,9 +61,9 @@ args = parser.parse_args()
 """ For test images in a folder """
 image_list, _, _ = file_utils.get_files(args.test_folder)
 
-result_folder = './result/'
-if not os.path.isdir(result_folder):
-    os.mkdir(result_folder)
+result_folder = '/data/'
+# if not os.path.isdir(result_folder):
+#     os.mkdir(result_folder)
 
 def test_net(net, image, text_threshold, link_threshold, low_text, cuda, poly, refine_net=None):
     t0 = time.time()
@@ -163,8 +162,6 @@ if __name__ == '__main__':
 
         # save score text
         filename, file_ext = os.path.splitext(os.path.basename(image_path))
-        mask_file = result_folder + "/res_" + filename + '_mask.jpg'
-        cv2.imwrite(mask_file, score_text)
 
         file_utils.saveResult(image_path, image[:,:,::-1], polys, dirname=result_folder)
 
