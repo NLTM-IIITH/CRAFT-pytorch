@@ -33,6 +33,18 @@ def list_files(in_path):
     # gt_files.sort()
     return img_files, mask_files, gt_files
 
+def convert_to_xywh(result):
+    a = result.strip().split(',')
+    a = list(map(int, a))
+    assert len(a) == 8
+    x = min(a[0], a[6])
+    y = min(a[1], a[3])
+    x2 = max(a[2], a[4])
+    y2 = max(a[5], a[7])
+    ret = [x,y,x2-x,y2-y]
+    ret = list(map(str, ret))
+    return ','.join(ret) + '\r\n'
+
 def saveResult(img_file, img, boxes, dirname='./result/', verticals=None, texts=None):
         """ save text detection result one by one
         Args:
@@ -58,5 +70,6 @@ def saveResult(img_file, img, boxes, dirname='./result/', verticals=None, texts=
             for i, box in enumerate(boxes):
                 poly = np.array(box).astype(np.int32).reshape((-1))
                 strResult = ','.join([str(p) for p in poly]) + '\r\n'
+                strResult = convert_to_xywh(strResult)
                 f.write(strResult)
 
